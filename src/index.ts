@@ -22,6 +22,9 @@ async function getGoogleAuthClient(): Promise<JWT> {
     });
 
     await client.authorize();
+
+    console.log('Google認証に成功しました');
+
     return client;
   } catch (error) {
     throw new Error(`Google認証に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
