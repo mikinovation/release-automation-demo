@@ -82,7 +82,7 @@ async function run(): Promise<void> {
     const response = await notion.databases.query({
       database_id: databaseId,
       filter: {
-        property: 'Date',
+        property: 'リリース日',
         date: {
           equals: formattedDate,
         },
