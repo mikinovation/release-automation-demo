@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v3
       
       - name: リリースタスクの取得と記録
-        uses: dist/index.js
+        uses: ./
         id: release-tasks
         with:
           notion-api-key: ${{ secrets.NOTION_API_KEY }}
