@@ -111,10 +111,8 @@ async function run(): Promise<void> {
         console.log(`${index + 1}. ${task.title}`);
       });
 
-      // バージョン情報を表示
       console.log(`リリースバージョン: ${version}`);
 
-      // Google Sheetsに記録
       console.log('Google Sheetsにリリース情報を記録します...');
       const authClient = await getGoogleAuthClient();
       const spreadsheetUrl = await appendToSpreadsheet(
