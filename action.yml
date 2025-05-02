@@ -1,0 +1,38 @@
+name: 'Release Automation Demo'
+description: 'Notionカレンダーからリリースタスクを取得して表示し、スプレッドシートに記録するアクション'
+branding:
+  icon: 'calendar'
+  color: 'blue'
+
+inputs:
+  notion-api-key:
+    description: 'Notion API キー'
+    required: true
+  database-id:
+    description: 'タスクが含まれるNotionデータベースのID'
+    required: true
+  spreadsheet-id:
+    description: 'リリース情報を記録するGoogle SpreadsheetのID'
+    required: true
+  sheet-name:
+    description: 'リリース情報を記録するシート名'
+    required: true
+    default: 'リリース履歴'
+  google-credentials-json:
+    description: 'Google API認証用のサービスアカウント認証情報（JSON形式）'
+    required: true
+  version:
+    description: 'リリースのバージョン番号'
+    required: false
+
+outputs:
+  task-count:
+    description: '見つかったタスクの数'
+  tasks:
+    description: 'タスクの詳細情報（JSON形式）'
+  spreadsheet-url:
+    description: '更新したスプレッドシートのURL'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
