@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import { Client } from '@notionhq/client';
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
@@ -39,7 +40,7 @@ async function appendToSpreadsheet(
   version: string
 ): Promise<string> {
   try {
-    const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: 'v4', auth: auth as any });
     const today = new Date();
     const formattedDate = today.toISOString().split('T')[0];
     
@@ -65,6 +66,41 @@ async function appendToSpreadsheet(
   }
 }
 
+async function createPullRequest(): Promise<void> {
+  try {
+    const token = core.getInput('github-token', { required: true });
+    const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
+    const version = core.getInput('version', { required: true });
+    const prTitle = `main→release(${version})`;
+    const prBody = 'Automated PR from main to release branch';
+    
+    console.log('mainからreleaseブランチへのプルリクエストを作成します...');
+    
+    const { data: pullRequest } = await octokit.rest.pulls.create({
+      owner,
+      repo,
+      title: prTitle,
+      body: prBody,
+      head: 'main',
+      base: 'release'
+    });
+    
+    console.log(`プルリクエストが作成されました: ${pullRequest.html_url}`);
+    core.setOutput('pull-request-url', pullRequest.html_url);
+    core.setOutput('pull-request-number', pullRequest.number);
+    
+    return;
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(`プルリクエスト作成に失敗しました: ${error.message}`);
+    } else {
+      core.setFailed('プルリクエスト作成中に不明なエラーが発生しました');
+    }
+    throw error;
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const notionApiKey = core.getInput('notion-api-key', { required: true });
@@ -72,6 +108,7 @@ async function run(): Promise<void> {
     const spreadsheetId = core.getInput('spreadsheet-id', { required: true });
     const version = core.getInput('version', { required: true });
     const sheetName = core.getInput('sheet-name') || 'リリース履歴';
+    const createPr = true;
     
     const notion = new Client({
       auth: notionApiKey,
@@ -128,8 +165,25 @@ async function run(): Promise<void> {
 
       console.log(`スプレッドシートの更新が完了しました: ${spreadsheetUrl}`);
       core.setOutput('spreadsheet-url', spreadsheetUrl);
+      
+      if (createPr) {
+        try {
+          await createPullRequest();
+        } catch (error) {
+          console.log('プルリクエスト作成プロセスでエラーが発生しましたが、メインの処理は完了しています。');
+        }
+      }
     } else {
       console.log('今日リリースが予定されているタスクはありません。');
+      
+      if (createPr) {
+        try {
+          console.log('タスクがなくても指定された場合はプルリクエストを作成します...');
+          await createPullRequest();
+        } catch (error) {
+          console.log('プルリクエスト作成プロセスでエラーが発生しました。');
+        }
+      }
     }
 
   } catch (error) {

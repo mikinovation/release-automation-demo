@@ -23,6 +23,9 @@ inputs:
     required: true
   version:
     description: 'リリースのバージョン番号'
+    required: true
+  github-token:
+    description: 'GitHub APIを使用するためのトークン'
     required: false
 
 outputs:
@@ -32,6 +35,10 @@ outputs:
     description: 'タスクの詳細情報（JSON形式）'
   spreadsheet-url:
     description: '更新したスプレッドシートのURL'
+  pull-request-url:
+    description: '作成されたプルリクエストのURL'
+  pull-request-number:
+    description: '作成されたプルリクエストの番号'
 
 runs:
   using: 'node20'
