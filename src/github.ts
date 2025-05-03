@@ -1,11 +1,50 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Client } from '@notionhq/client';
+import { Task } from './googleAuth';
+import { getTodaysReleaseTasks } from './notion';
 
-type Task = {
-  id: string;
-  title: string;
-  url: string;
+export async function createPullRequest(version: string): Promise<void> {
+  try {
+    const token = core.getInput('github-token', { required: true });
+    const octokit = github.getOctokit(token);
+    const { owner, repo } = github.context.repo;
+    const prTitle = `main→release(${version})`;
+    const prBody = 'Automated PR from main to release branch';
+    
+    console.log('mainからreleaseブランチへのプルリクエストを作成します...');
+    
+    try {
+      const { data: pullRequest } = await octokit.rest.pulls.create({
+        owner,
+        repo,
+        title: prTitle,
+        body: prBody,
+        head: 'main',
+        base: 'release'
+      });
+      
+      console.log(`プルリクエストが作成されました: ${pullRequest.html_url}`);
+      core.setOutput('pull-request-url', pullRequest.html_url);
+      core.setOutput('pull-request-number', pullRequest.number);
+    } catch (apiError) {
+      console.error(`APIエラー詳細: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+      console.error('注意: このエラーは権限の問題である可能性があります。パーソナルアクセストークン(PAT)をGITHUB_TOKENの代わりに使用してください。');
+      throw new Error('Resource not accessible by integrationエラーの場合、リポジトリ設定で適切な権限を持つPATを設定してください。');
+    }
+    
+    return;
+  } catch (error) {
+    if (error instanceof Error) {
+      core.setFailed(`プルリクエスト作成に失敗しました: ${error.message}`);
+    } else {
+      core.setFailed('プルリクエスト作成中に不明なエラーが発生しました');
+    }
+    throw error;
+  }
+}
+
+export function isReleaseContext(): boolean {
+  return github.context.ref === 'refs/heads/release';
 }
 
 async function generateReleaseNotes(tasks: Task[], version: string): Promise<string> {
@@ -59,44 +98,12 @@ async function createGitHubRelease(version: string, releaseNotes: string): Promi
 
 export async function createReleaseNote(): Promise<void> {
   try {
-    const notionApiKey = core.getInput('notion-api-key', { required: true });
-    const databaseId = core.getInput('database-id', { required: true });
     const version = core.getInput('version', { required: true });
     
-    const notion = new Client({
-      auth: notionApiKey,
-    });
-
-    const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0];
-
-    console.log(`${formattedDate} のリリース予定タスクを取得します`);
-
-    const response = await notion.databases.query({
-      database_id: databaseId,
-      filter: {
-        property: 'リリース日',
-        date: {
-          equals: formattedDate,
-        },
-      },
-    });
-
-    const tasks = response.results.map((page: any) => {
-      const titleProperty = page.properties.Title || page.properties.Name;
-      const title = titleProperty.title.map((t: any) => t.plain_text).join('');
-      
-      return {
-        id: page.id,
-        title: title,
-        url: page.url,
-      };
-    });
+    const tasks = await getTodaysReleaseTasks();
 
     console.log(`${tasks.length} 件のタスクが見つかりました`);
-    core.setOutput('task-count', tasks.length);
-    core.setOutput('tasks', JSON.stringify(tasks));
-
+    
     const releaseNotes = await generateReleaseNotes(tasks, version);
     console.log('リリースノートを生成しました:');
     console.log(releaseNotes);
@@ -110,5 +117,6 @@ export async function createReleaseNote(): Promise<void> {
     } else {
       core.setFailed('不明なエラーが発生しました');
     }
+    throw error;
   }
 }
