@@ -1,0 +1,55 @@
+name: Release Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'リリースのバージョン番号 (例: 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  process-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Notionからリリースタスクを取得してスプレッドシートに記録
+      - name: Run Release Automation
+        id: release-automation
+        uses: ./
+        with:
+          notion-api-key: ${{ secrets.NOTION_API_KEY }}
+          database-id: ${{ secrets.NOTION_DATABASE_ID }}
+          spreadsheet-id: ${{ secrets.SPREADSHEET_ID }}
+          sheet-name: 'リリース履歴'
+          google-credentials-json: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          version: ${{ github.event.inputs.version }}
+      
+      # スプレッドシート転記後にプルリクエストを作成
+      - name: Create Pull Request
+        if: success()
+        id: create-pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: release v${{ github.event.inputs.version }}"
+          title: "main → release(${{ github.event.inputs.version }})"
+          body: |
+            ## Release v${{ github.event.inputs.version }}
+            
+            このPRは自動的に作成されました。
+            
+            ### リリースタスク
+            ${{ steps.release-automation.outputs.tasks }}
+            
+            ### スプレッドシート
+            ${{ steps.release-automation.outputs.spreadsheet-url }}
+          base: release
+          branch: main
+      
+      - name: PR Details
+        if: steps.create-pr.outputs.pull-request-number
+        run: |
+          echo "Pull Request created: ${{ steps.create-pr.outputs.pull-request-url }}"
