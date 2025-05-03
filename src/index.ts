@@ -91,8 +91,8 @@ async function createPullRequest(): Promise<void> {
       core.setOutput('pull-request-url', pullRequest.html_url);
       core.setOutput('pull-request-number', pullRequest.number);
     } catch (apiError) {
-      console.log(`APIエラー詳細: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
-      console.log('注意: このエラーは権限の問題である可能性があります。パーソナルアクセストークン(PAT)をGITHUB_TOKENの代わりに使用してください。');
+      console.error(`APIエラー詳細: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+      console.error('注意: このエラーは権限の問題である可能性があります。パーソナルアクセストークン(PAT)をGITHUB_TOKENの代わりに使用してください。');
       throw new Error('Resource not accessible by integrationエラーの場合、リポジトリ設定で適切な権限を持つPATを設定してください。');
     }
     
@@ -176,7 +176,7 @@ async function run(): Promise<void> {
         try {
           await createPullRequest();
         } catch (error) {
-          console.log('プルリクエスト作成プロセスでエラーが発生しましたが、メインの処理は完了しています。');
+          console.error('プルリクエスト作成プロセスでエラーが発生しましたが、メインの処理は完了しています。');
         }
       }
     } else {
@@ -187,7 +187,7 @@ async function run(): Promise<void> {
           console.log('タスクがなくても指定された場合はプルリクエストを作成します...');
           await createPullRequest();
         } catch (error) {
-          console.log('プルリクエスト作成プロセスでエラーが発生しました。');
+          console.error('プルリクエスト作成プロセスでエラーが発生しました。');
         }
       }
     }
