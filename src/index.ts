@@ -8,7 +8,6 @@ async function run(): Promise<void> {
     const spreadsheetId = core.getInput('spreadsheet-id', { required: true });
     const version = core.getInput('version', { required: true });
     const sheetName = core.getInput('sheet-name') || 'リリース履歴';
-    const createPr = true;
     const generateRelease = isReleaseContext();
     
     const tasks = await getTodaysReleaseTasks();
@@ -25,7 +24,21 @@ async function run(): Promise<void> {
       
       core.setOutput('spreadsheet-url', spreadsheetUrl);
       
-      if (createPr) {
+      // リリースノートの生成（releaseブランチへのマージ時）
+      if (generateRelease) {
+        console.log('releaseブランチへのマージを検出しました。リリースノートを生成します...');
+        try {
+          await createReleaseNote();
+        } catch (error) {
+          console.error('リリースノート生成プロセスでエラーが発生しました。');
+          if (error instanceof Error) {
+            core.setFailed(error.message);
+          } else {
+            core.setFailed('リリースノート生成中に不明なエラーが発生しました');
+          }
+        }
+      // リリースPRの作成
+      } else {
         try {
           await createPullRequest(version);
         } catch (error) {
@@ -33,33 +46,9 @@ async function run(): Promise<void> {
         }
       }
     } else {
-      console.log('今日リリースが予定されているタスクはありません。');
-      
-      if (createPr) {
-        try {
-          console.log('タスクがなくても指定された場合はプルリクエストを作成します...');
-          await createPullRequest(version);
-        } catch (error) {
-          console.error('プルリクエスト作成プロセスでエラーが発生しました。');
-        }
-      }
+      console.error('今日リリースが予定されているタスクはありません。');
+      throw new Error('リリース予定のタスクが見つかりませんでした。');
     }
-    
-    // リリースノートの生成（releaseブランチへのマージ時）
-    if (generateRelease) {
-      console.log('releaseブランチへのマージを検出しました。リリースノートを生成します...');
-      try {
-        await createReleaseNote();
-      } catch (error) {
-        console.error('リリースノート生成プロセスでエラーが発生しました。');
-        if (error instanceof Error) {
-          core.setFailed(error.message);
-        } else {
-          core.setFailed('リリースノート生成中に不明なエラーが発生しました');
-        }
-      }
-    }
-
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
