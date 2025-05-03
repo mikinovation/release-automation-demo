@@ -3,8 +3,9 @@ import * as github from '@actions/github';
 import { Client } from '@notionhq/client';
 import { google } from 'googleapis';
 import { JWT } from 'google-auth-library';
+import { createReleaseNote } from './generateReleaseNote';
 
-interface Task {
+type Task = {
   id: string;
   title: string;
   url: string;
@@ -115,6 +116,7 @@ async function run(): Promise<void> {
     const version = core.getInput('version', { required: true });
     const sheetName = core.getInput('sheet-name') || 'リリース履歴';
     const createPr = true;
+    const generateRelease = github.context.ref === 'refs/heads/release';
     
     const notion = new Client({
       auth: notionApiKey,
@@ -188,6 +190,21 @@ async function run(): Promise<void> {
           await createPullRequest();
         } catch (error) {
           console.error('プルリクエスト作成プロセスでエラーが発生しました。');
+        }
+      }
+    }
+    
+    // リリースノートの生成（releaseブランチへのマージ時）
+    if (generateRelease) {
+      console.log('releaseブランチへのマージを検出しました。リリースノートを生成します...');
+      try {
+        await createReleaseNote();
+      } catch (error) {
+        console.error('リリースノート生成プロセスでエラーが発生しました。');
+        if (error instanceof Error) {
+          core.setFailed(error.message);
+        } else {
+          core.setFailed('リリースノート生成中に不明なエラーが発生しました');
         }
       }
     }

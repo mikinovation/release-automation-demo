@@ -1,0 +1,28 @@
+name: Release Automation
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  generate-release-notes:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get version from package.json
+        id: get-version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+      
+      - name: Generate Release Notes
+        uses: ./
+        with:
+          notion-api-key: ${{ secrets.NOTION_API_KEY }}
+          database-id: ${{ secrets.NOTION_DATABASE_ID }}
+          spreadsheet-id: ${{ secrets.SPREADSHEET_ID }}
+          sheet-name: 'リリース履歴'
+          version: ${{ env.VERSION }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

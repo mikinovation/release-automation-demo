@@ -39,6 +39,8 @@ outputs:
     description: '作成されたプルリクエストのURL'
   pull-request-number:
     description: '作成されたプルリクエストの番号'
+  release-url:
+    description: '作成されたGitHubリリースページのURL'
 
 runs:
   using: 'node20'
