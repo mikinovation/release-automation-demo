@@ -15,15 +15,6 @@ async function run(): Promise<void> {
     if (tasks.length > 0) {
       console.log(`リリースバージョン: ${version}`);
 
-      const spreadsheetUrl = await recordTasksToSpreadsheet(
-        tasks,
-        spreadsheetId,
-        sheetName,
-        version
-      );
-      
-      core.setOutput('spreadsheet-url', spreadsheetUrl);
-      
       // リリースノートの生成（releaseブランチへのマージ時）
       if (generateRelease) {
         console.log('releaseブランチへのマージを検出しました。リリースノートを生成します...');
@@ -40,6 +31,15 @@ async function run(): Promise<void> {
       // リリースPRの作成
       } else {
         try {
+          const spreadsheetUrl = await recordTasksToSpreadsheet(
+            tasks,
+            spreadsheetId,
+            sheetName,
+            version
+          );
+      
+          core.setOutput('spreadsheet-url', spreadsheetUrl);
+
           await createPullRequest(version);
         } catch (error) {
           console.error('プルリクエスト作成プロセスでエラーが発生しましたが、メインの処理は完了しています。');
