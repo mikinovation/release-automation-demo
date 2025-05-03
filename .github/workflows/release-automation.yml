@@ -25,4 +25,4 @@ jobs:
           spreadsheet-id: ${{ secrets.SPREADSHEET_ID }}
           sheet-name: 'リリース履歴'
           version: ${{ env.VERSION }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT }}
