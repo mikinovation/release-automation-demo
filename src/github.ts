@@ -100,7 +100,6 @@ export async function createPullRequest(version: string): Promise<void> {
 }
 
 export function isReleaseContext(): boolean {
-  console.log(`GitHub Context: ${github.context.ref}`);
   return github.context.ref === 'refs/heads/release';
 }
 
