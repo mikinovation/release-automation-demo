@@ -26,4 +26,4 @@ jobs:
           sheet-name: 'リリース履歴'
           google-credentials-json: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           version: ${{ github.event.inputs.version }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT }}

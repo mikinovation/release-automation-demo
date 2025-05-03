@@ -77,18 +77,24 @@ async function createPullRequest(): Promise<void> {
     
     console.log('mainからreleaseブランチへのプルリクエストを作成します...');
     
-    const { data: pullRequest } = await octokit.rest.pulls.create({
-      owner,
-      repo,
-      title: prTitle,
-      body: prBody,
-      head: 'main',
-      base: 'release'
-    });
-    
-    console.log(`プルリクエストが作成されました: ${pullRequest.html_url}`);
-    core.setOutput('pull-request-url', pullRequest.html_url);
-    core.setOutput('pull-request-number', pullRequest.number);
+    try {
+      const { data: pullRequest } = await octokit.rest.pulls.create({
+        owner,
+        repo,
+        title: prTitle,
+        body: prBody,
+        head: 'main',
+        base: 'release'
+      });
+      
+      console.log(`プルリクエストが作成されました: ${pullRequest.html_url}`);
+      core.setOutput('pull-request-url', pullRequest.html_url);
+      core.setOutput('pull-request-number', pullRequest.number);
+    } catch (apiError) {
+      console.log(`APIエラー詳細: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+      console.log('注意: このエラーは権限の問題である可能性があります。パーソナルアクセストークン(PAT)をGITHUB_TOKENの代わりに使用してください。');
+      throw new Error('Resource not accessible by integrationエラーの場合、リポジトリ設定で適切な権限を持つPATを設定してください。');
+    }
     
     return;
   } catch (error) {
