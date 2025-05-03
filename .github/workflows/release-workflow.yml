@@ -22,7 +22,7 @@ jobs:
         with:
           notion-api-key: ${{ secrets.NOTION_API_KEY }}
           database-id: ${{ secrets.NOTION_DATABASE_ID }}
-          spreadsheet-id: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          spreadsheet-id: ${{ secrets.SPREADSHEET_ID }}
           sheet-name: 'リリース履歴'
           google-credentials-json: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           version: ${{ github.event.inputs.version }}
