@@ -2,24 +2,80 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { Task } from './googleAuth';
 import { getTodaysReleaseTasks } from './notion';
+import { updatePackageVersion } from './updatePackageVersion';
 
 export async function createPullRequest(version: string): Promise<void> {
   try {
     const token = core.getInput('github-token', { required: true });
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
+    const branchName = `release-${version}`;
     const prTitle = `main→release(${version})`;
     const prBody = 'Automated PR from main to release branch';
     
-    console.log('mainからreleaseブランチへのプルリクエストを作成します...');
+    console.log(`新しいブランチ ${branchName} を作成します...`);
     
     try {
+      // mainブランチのリファレンスを取得
+      const { data: mainRef } = await octokit.rest.git.getRef({
+        owner,
+        repo,
+        ref: 'heads/main'
+      });
+      
+      // 新しいブランチを作成
+      try {
+        await octokit.rest.git.createRef({
+          owner,
+          repo,
+          ref: `refs/heads/${branchName}`,
+          sha: mainRef.object.sha
+        });
+        console.log(`ブランチ ${branchName} を作成しました`);
+      } catch (branchError) {
+        if (branchError instanceof Error && branchError.message.includes('Reference already exists')) {
+          console.log(`ブランチ ${branchName} はすでに存在しています`);
+        } else {
+          throw branchError;
+        }
+      }
+      
+      // package.jsonのバージョンを更新
+      await updatePackageVersion(version);
+      
+      // 変更をコミット
+      const packageJsonFile = 'package.json';
+      
+      // ファイルの現在の内容を取得
+      const { data: fileData } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: packageJsonFile,
+        ref: `refs/heads/${branchName}`
+      });
+      
+      if ('content' in fileData && 'sha' in fileData) {
+        // バージョンを更新したpackage.jsonをコミット
+        await octokit.rest.repos.createOrUpdateFileContents({
+          owner,
+          repo,
+          path: packageJsonFile,
+          message: `バージョンを ${version} に更新`,
+          content: Buffer.from(JSON.stringify(JSON.parse(require('fs').readFileSync(packageJsonFile, 'utf8')), null, 2)).toString('base64'),
+          sha: fileData.sha,
+          branch: branchName
+        });
+        
+        console.log(`package.jsonのバージョンを ${version} に更新しました`);
+      }
+      
+      // PRを作成
       const { data: pullRequest } = await octokit.rest.pulls.create({
         owner,
         repo,
         title: prTitle,
         body: prBody,
-        head: 'main',
+        head: branchName,
         base: 'release'
       });
       
