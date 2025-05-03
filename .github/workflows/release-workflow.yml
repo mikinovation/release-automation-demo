@@ -8,10 +8,6 @@ on:
         required: true
         default: '1.0.0'
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   process-release:
     runs-on: ubuntu-latest
@@ -30,3 +26,4 @@ jobs:
           sheet-name: 'リリース履歴'
           google-credentials-json: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           version: ${{ github.event.inputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
